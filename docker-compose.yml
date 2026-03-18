@@ -9,18 +9,22 @@ x-api-base: &api-base
       condition: service_healthy
   restart: unless-stopped
 
+# Шаблон для веб-сервисов с защитой
 x-traefik-web: &traefik-web
   traefik.enable: "true"
   traefik.http.routers.${PROJECT_NAME}-web.rule: "Host(`${PROJECT_DOMAIN}`)"
   traefik.http.routers.${PROJECT_NAME}-web.entrypoints: "websecure"
   traefik.http.routers.${PROJECT_NAME}-web.tls.certresolver: "letsencrypt"
+  traefik.http.routers.${PROJECT_NAME}-web.middlewares: "demo-auth@docker" # Привязка к авторизации
   traefik.http.services.${PROJECT_NAME}-web.loadbalancer.server.port: "3000"
 
+# Шаблон для API с защитой
 x-traefik-api: &traefik-api
   traefik.enable: "true"
   traefik.http.routers.${PROJECT_NAME}-api.rule: "Host(`api.${PROJECT_DOMAIN}`)"
   traefik.http.routers.${PROJECT_NAME}-api.entrypoints: "websecure"
   traefik.http.routers.${PROJECT_NAME}-api.tls.certresolver: "letsencrypt"
+  traefik.http.routers.${PROJECT_NAME}-api.middlewares: "demo-auth@docker" # Привязка к авторизации
   traefik.http.services.${PROJECT_NAME}-api.loadbalancer.server.port: "3000"
 
 services:
@@ -36,6 +40,9 @@ services:
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
+      # Редирект с HTTP на HTTPS
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
@@ -46,13 +53,23 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./acme.json:/letsencrypt/acme.json
       - ./logs/traefik:/var/log/traefik
     networks:
       - traefik_public
+    labels:
+      - "traefik.enable=true"
+      # Глобальный Middleware для Basic Auth
+      - "traefik.http.middlewares.demo-auth.basicauth.users=${BASIC_AUTH_USER_HASH}"
+      
+      # Доступ к Дашборду Traefik через домен
+      - "traefik.http.routers.traefik-dash.rule=Host(`traefik.${PROJECT_DOMAIN}`)"
+      - "traefik.http.routers.traefik-dash.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dash.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dash.service=api@internal"
+      - "traefik.http.routers.traefik-dash.middlewares=demo-auth"
     restart: unless-stopped
 
   # Глобальный Postgres
