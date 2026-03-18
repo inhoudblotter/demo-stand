@@ -57,7 +57,7 @@ services:
 
   # Глобальный Postgres
   postgres:
-    image: postgres:16-alpine
+    image: postgres:latest
     container_name: demo-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
