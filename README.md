@@ -23,7 +23,20 @@ nano .env
 Обязательно укажите:
 - `PROJECT_DOMAIN` — ваш основной домен (например, `example.com`).
 - `LETSENCRYPT_EMAIL` — ваш email для регистрации SSL сертификатов.
+- `BASIC_AUTH_USER_HASH` — хеш для доступа к дашборду и сервисам.
 - `POSTGRES_USER` и `POSTGRES_PASSWORD`.
+
+#### Генерация BASIC_AUTH_USER_HASH
+Для защиты дашборда Traefik и ваших сервисов необходимо сгенерировать хеш пароля. Выполните команду на сервере:
+```bash
+# Установите утилиту, если она отсутствует
+sudo apt install apache2-utils -y
+
+# Сгенерируйте хеш (замените admin и password на свои)
+# sed используется для дублирования знаков $, что необходимо для docker-compose
+echo $(htpasswd -nb admin password) | sed -e s/\\$/\\$\\$/g
+```
+Полученную строку вставьте в переменную `BASIC_AUTH_USER_HASH` в файле `.env`.
 
 ### 3. Инициализация инфраструктуры
 Создайте необходимые сети и запустите базовые сервисы (Traefik и Postgres):
