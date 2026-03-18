@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  project1-api:
+    build: ./api
+    container_name: project1-api
+    environment:
+      DATABASE_URL: postgresql://${PROJECT1_APP_USER}:${PROJECT1_APP_PASS}@postgres:5432/${PROJECT1_DB}
+      NODE_ENV: development
+    networks: *api-base
+    labels: *traefik-api
+    restart: unless-stopped
+
+  project1-web:
+    build: ./web
+    container_name: project1-web
+    environment:
+      NEXT_PUBLIC_API_URL: https://api.${PROJECT1_DOMAIN}
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    networks:
+      - traefik_public
+    labels: 
+      <<: *traefik
+    depends_on:
+      - project1-api
+    restart: unless-stopped
+
