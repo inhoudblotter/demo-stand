@@ -110,6 +110,13 @@ net.ipv4.conf.default.rp_filter = 1
 
 ## 6. Защита от перебора (Fail2Ban)
 
+```bash
+# Установка Fail2Ban
+sudo apt update && sudo apt install fail2ban -y
+# Создание локального конфига
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+```
+
 ### Настройка SSHD (systemd)
 В `/etc/fail2ban/jail.local`:
 ```ini
@@ -126,6 +133,25 @@ bantime = 7200
 [Definition]
 failregex = "ClientIP\":\"<HOST>\".*?(?:\"status\":4[02][1-9]|\"DownstreamStatusCode\":4[02][1-9]|\"status\":429)
 ignoreregex =
+```
+
+### Действие для Docker (Iptables)
+Создаем `/etc/fail2ban/action.d/docker-action.conf`:
+```ini
+[Definition]
+actionstart = iptables -N f2b-traefik
+              iptables -A f2b-traefik -j RETURN
+              iptables -I DOCKER-USER -p tcp -m multiport --dports 80,443 -j f2b-traefik
+
+actionstop = iptables -D DOCKER-USER -p tcp -m multiport --dports 80,443 -j f2b-traefik
+             iptables -F f2b-traefik
+             iptables -X f2b-traefik
+
+actioncheck = iptables -n -L DOCKER-USER | grep -q 'f2b-traefik[ \t]'
+
+actionban = iptables -I f2b-traefik 1 -s <ip> -j DROP
+
+actionunban = iptables -D f2b-traefik -s <ip> -j DROP
 ```
 
 ### Активация в `jail.local`
