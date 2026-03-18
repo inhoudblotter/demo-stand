@@ -40,8 +40,8 @@ services:
       - --entrypoints.websecure.address=:443
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
-      # Исправление WARNING про кодированные символы (v3)
-      - --core.allowencodedslashes=true
+      # Исправление: Правильный регистр для Traefik v3
+      - --core.allowEncodedSlashes=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
