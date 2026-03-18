@@ -51,6 +51,11 @@ mkdir -p ./logs/traefik
 touch ./logs/traefik/access.log
 touch acme.json && chmod 600 acme.json
 
+# Исправление прав для режима Hardening (userns-remap)
+# Обычно ID пользователя dockremap — 165536
+sudo chown 165536:165536 acme.json
+sudo chown -R 165536:165536 ./logs/traefik
+
 # Запуск
 docker compose up -d
 ```

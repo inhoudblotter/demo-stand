@@ -13,7 +13,7 @@ x-traefik-web: &traefik-web
   traefik.http.routers.${PROJECT_NAME}-web.rule: "Host(`${PROJECT_DOMAIN}`)"
   traefik.http.routers.${PROJECT_NAME}-web.entrypoints: "websecure"
   traefik.http.routers.${PROJECT_NAME}-web.tls.certresolver: "letsencrypt"
-  traefik.http.routers.${PROJECT_NAME}-web.middlewares: "demo-auth@docker" # Привязка к авторизации
+  traefik.http.routers.${PROJECT_NAME}-web.middlewares: "demo-auth@docker"
   traefik.http.services.${PROJECT_NAME}-web.loadbalancer.server.port: "3000"
 
 # Шаблон для API с защитой
@@ -22,7 +22,7 @@ x-traefik-api: &traefik-api
   traefik.http.routers.${PROJECT_NAME}-api.rule: "Host(`api.${PROJECT_DOMAIN}`)"
   traefik.http.routers.${PROJECT_NAME}-api.entrypoints: "websecure"
   traefik.http.routers.${PROJECT_NAME}-api.tls.certresolver: "letsencrypt"
-  traefik.http.routers.${PROJECT_NAME}-api.middlewares: "demo-auth@docker" # Привязка к авторизации
+  traefik.http.routers.${PROJECT_NAME}-api.middlewares: "demo-auth@docker"
   traefik.http.services.${PROJECT_NAME}-api.loadbalancer.server.port: "3000"
 
 services:
@@ -38,9 +38,10 @@ services:
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      # Редирект с HTTP на HTTPS
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      # Исправление WARNING про кодированные символы (v3)
+      - --core.allowencodedslashes=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
@@ -59,10 +60,7 @@ services:
       - traefik_public
     labels:
       - "traefik.enable=true"
-      # Глобальный Middleware для Basic Auth
       - "traefik.http.middlewares.demo-auth.basicauth.users=${BASIC_AUTH_USER_HASH}"
-      
-      # Доступ к Дашборду Traefik через домен
       - "traefik.http.routers.traefik-dash.rule=Host(`traefik.${PROJECT_DOMAIN}`)"
       - "traefik.http.routers.traefik-dash.entrypoints=websecure"
       - "traefik.http.routers.traefik-dash.tls.certresolver=letsencrypt"
@@ -74,7 +72,6 @@ services:
   postgres:
     image: postgres:latest
     container_name: demo-postgres
-    # Оптимизация для слабого сервера (Low Resource Usage)
     command:
       - "postgres"
       - "-c"
@@ -91,6 +88,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
+      # Явное указание пути для данных внутри тома (для v17+)
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_demo_data:/var/lib/postgresql
       - ./init-databases.sh:/docker-entrypoint-initdb.d/init.sh
