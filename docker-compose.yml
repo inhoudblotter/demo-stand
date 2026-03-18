@@ -40,8 +40,6 @@ services:
       - --entrypoints.websecure.address=:443
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
-      # Исправление: Правильный регистр для Traefik v3
-      - --core.allowEncodedSlashes=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
@@ -88,7 +86,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
-      # Явное указание пути для данных внутри тома (для v17+)
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_demo_data:/var/lib/postgresql
@@ -96,7 +93,9 @@ services:
     networks:
       - postgres_demo
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      # Указываем базу postgres явно (-d postgres), чтобы проверка не падала 
+      # пока создаются пользовательские базы данных
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
