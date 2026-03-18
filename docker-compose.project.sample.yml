@@ -1,0 +1,27 @@
+services:
+  # Название вашего проекта
+  project-name:
+    image: your-image:latest
+    container_name: demo-project-name
+    environment:
+      # Параметры подключения к общей базе (укажите свои из .env)
+      DATABASE_URL: postgres://user1:pass1@demo-postgres:5432/project1
+    networks:
+      - traefik_public
+      - postgres_demo
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.project-name.rule=Host(`project1.${PROJECT_DOMAIN}`)"
+      - "traefik.http.routers.project-name.entrypoints=websecure"
+      - "traefik.http.routers.project-name.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.project-name.middlewares=demo-auth@docker"
+      - "traefik.http.services.project-name.loadbalancer.server.port=3000"
+    restart: unless-stopped
+
+networks:
+  traefik_public:
+    external: true
+    name: demo-traefik_public
+  postgres_demo:
+    external: true
+    name: demo-postgres_demo

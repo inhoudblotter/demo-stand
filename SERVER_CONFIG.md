@@ -276,3 +276,15 @@ fi
 Проблема с правами доступа к сокету Docker после настройки `daemon.json` (userns-remap).
 **Решение:**
 Выполните `sudo chmod 666 /var/run/docker.sock` на хосте и перезапустите контейнер Traefik.
+
+### Ошибка Traefik: "open /letsencrypt/acme.json: permission denied"
+В режиме `userns-remap` корень контейнера не совпадает с корнем хоста.
+**Решение:**
+Нужно сменить владельца файлов на ID переназначенного пользователя (обычно `165536`):
+```bash
+# Узнать ID
+grep dockremap /etc/subuid
+# Сменить владельца
+sudo chown 165536:165536 acme.json
+sudo chown -R 165536:165536 ./logs/traefik
+```

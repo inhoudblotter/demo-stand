@@ -27,3 +27,11 @@ services:
       - project1-api
     restart: unless-stopped
 
+networks:
+  traefik_public:
+    external: true
+    name: demo-traefik_public
+  postgres_demo:
+    external: true
+    name: demo-postgres_demo
+
