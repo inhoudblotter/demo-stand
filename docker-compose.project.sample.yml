@@ -5,7 +5,7 @@ services:
     container_name: demo-project-name
     environment:
       # Параметры подключения к общей базе (укажите свои из .env)
-      DATABASE_URL: postgres://user1:pass1@demo-postgres:5432/project1
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASS}@demo-postgres:5432/${DB_NAME}
     networks:
       - traefik_public
       - postgres_demo
@@ -14,7 +14,13 @@ services:
       - "traefik.http.routers.project-name.rule=Host(`project1.${PROJECT_DOMAIN}`)"
       - "traefik.http.routers.project-name.entrypoints=websecure"
       - "traefik.http.routers.project-name.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.project-name.middlewares=demo-auth@docker"
+      
+      # ИНДИВИДУАЛЬНАЯ ЗАЩИТА (Middleware)
+      # 1. Создаем локальный Middleware с паролем из .env проекта
+      - "traefik.http.middlewares.${PROJECT_NAME}-auth.basicauth.users=${PROJECT_AUTH_HASH}"
+      # 2. Привязываем роутер к этому Middleware
+      - "traefik.http.routers.project-name.middlewares=${PROJECT_NAME}-auth"
+      
       - "traefik.http.services.project-name.loadbalancer.server.port=3000"
     restart: unless-stopped
 
