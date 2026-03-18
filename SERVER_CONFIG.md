@@ -60,6 +60,7 @@ PubkeyAuthentication yes
 ```
 
 **Важно:** Сначала разрешите порт в Firewall (раздел 4), затем перезагрузите SSH:
+
 ```bash
 sudo sshd -t && sudo service ssh restart
 ```
@@ -118,9 +119,12 @@ sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
 ```
 
 ### Настройка SSHD (systemd)
+
 В `/etc/fail2ban/jail.local`:
+
 ```ini
 [sshd]
+port = change_me
 enabled = true
 backend = systemd
 maxretry = 3
@@ -128,7 +132,9 @@ bantime = 7200
 ```
 
 ### Фильтр для Traefik (JSON logs)
+
 Создаем `/etc/fail2ban/filter.d/traefik-json.conf`:
+
 ```ini
 [Definition]
 failregex = "ClientIP\":\"<HOST>\".*?(?:\"status\":4[02][1-9]|\"DownstreamStatusCode\":4[02][1-9]|\"status\":429)
@@ -136,7 +142,9 @@ ignoreregex =
 ```
 
 ### Действие для Docker (Iptables)
+
 Создаем `/etc/fail2ban/action.d/docker-action.conf`:
+
 ```ini
 [Definition]
 actionstart = iptables -N f2b-traefik
@@ -154,7 +162,8 @@ actionban = iptables -I f2b-traefik 1 -s <ip> -j DROP
 actionunban = iptables -D f2b-traefik -s <ip> -j DROP
 ```
 
-### Активация в `jail.local`
+### Активация в `/etc/fail2ban/jail.local`
+
 ```ini
 [traefik-json]
 enabled = true
@@ -164,6 +173,22 @@ maxretry = 20
 bantime = 3600
 findtime = 600
 chain = DOCKER-USER
+```
+
+### Проверка и перезапуск Fail2Ban
+
+После внесения всех изменений в конфигурационные файлы:
+
+```bash
+# Проверка синтаксиса конфигурации (выводит дамп конфига, если ок)
+sudo fail2ban-client -d
+
+# Перезапуск сервиса
+sudo systemctl restart fail2ban
+
+# Проверка статуса конкретных тюрем (Jails)
+sudo fail2ban-client status sshd
+sudo fail2ban-client status traefik-json
 ```
 
 ## 7. Оптимизация Docker
@@ -184,7 +209,23 @@ sudo nano /etc/docker/daemon.json
 }
 ```
 
+### Применение настроек и перезапуск Docker
+
+После правки `daemon.json` необходимо перезагрузить конфигурацию и сам сервис:
+
+```bash
+# Перезагрузка конфигурации демона
+sudo systemctl daemon-reload
+
+# Перезапуск сервиса Docker
+sudo systemctl restart docker
+
+# Проверка статуса (убедитесь, что Active: active (running))
+sudo systemctl status docker
+```
+
 Включите AppArmor:
+
 ```bash
 sudo apt install apparmor-utils -y
 sudo aa-status
@@ -193,7 +234,9 @@ sudo aa-status
 ## 8. Мониторинг в Telegram
 
 ### Алерт при SSH-входе
+
 Создаем `/etc/profile.d/ssh-alert.sh`:
+
 ```bash
 #!/bin/bash
 TOKEN="BOT_TOKEN"
@@ -209,7 +252,9 @@ fi
 ```
 
 ### Уведомление о перезагрузке
+
 В `sudo crontab -e`:
+
 ```bash
 @reboot curl -s -X POST "https://api.telegram.org/botBOT_TOKEN/sendMessage" -d chat_id=ADMIN_CHAT -d text="⚡ Server <b>$(hostname)</b> Started/Rebooted" -d parse_mode="HTML" > /dev/null 2>&1
 ```
