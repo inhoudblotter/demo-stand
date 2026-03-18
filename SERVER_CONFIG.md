@@ -222,6 +222,10 @@ sudo systemctl restart docker
 
 # Проверка статуса (убедитесь, что Active: active (running))
 sudo systemctl status docker
+
+# ВАЖНО: Если Traefik выдает "permission denied" на docker.sock
+# Это происходит из-за усиления защиты. Исправьте права:
+sudo chmod 666 /var/run/docker.sock
 ```
 
 Включите AppArmor:
@@ -258,3 +262,17 @@ fi
 ```bash
 @reboot curl -s -X POST "https://api.telegram.org/botBOT_TOKEN/sendMessage" -d chat_id=ADMIN_CHAT -d text="⚡ Server <b>$(hostname)</b> Started/Rebooted" -d parse_mode="HTML" > /dev/null 2>&1
 ```
+
+## 9. Решение частых проблем (Troubleshooting)
+
+### Ошибка Postgres: "PostgreSQL data in /var/lib/postgresql/data (unused mount/volume)"
+Это происходит при обновлении версии образа (например, с 16 на 17) или смене пути монтирования.
+**Решение:**
+1. Используйте путь монтирования `/var/lib/postgresql` (без `/data` в конце) в `docker-compose.yml`.
+2. Если данные не важны (демо-стенд), удалите старый том:
+   `docker compose down && docker volume rm demo-stand_postgres_demo_data`
+
+### Ошибка Traefik: "permission denied while trying to connect to the Docker daemon socket"
+Проблема с правами доступа к сокету Docker после настройки `daemon.json` (userns-remap).
+**Решение:**
+Выполните `sudo chmod 666 /var/run/docker.sock` на хосте и перезапустите контейнер Traefik.
